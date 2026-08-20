@@ -7,14 +7,11 @@
     (function(){
       const orig = console.error;
       console.error = function(...args) {
-        // Si es nuestro "Expected number" de SVG, lo ignoramos
         if (args[0] && typeof args[0] === 'string' && args[0].includes('Expected number')) {
           return;
         }
-        // Para todo lo demás, procedemos normalmente
         orig.apply(console, args);
       };
-      // También silenciamos window.onerror para asegurar capturarlo todo
       window.onerror = function() { return true; };
     })();
   </script>
@@ -22,129 +19,125 @@
   <meta charset="UTF-8" />
   <meta name="google" content="notranslate">
   <meta name="viewport" content="width=device-width,initial-scale=1.0" />
-  <!-- Evitar caché -->
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
   <script src="https://cdn.tailwindcss.com"></script>
-  <title>Buscador de Documentos</title>
+  <title>Gestor de Documentos · Los Montañeros</title>
   <style>
-    /* Overlay y modals */
-    .overlay { position: fixed; top:0; left:0; width:100vw; height:100vh; background: rgba(0,0,0,0.6); display:flex; align-items:center; justify-content:center; z-index:9999; }
-    .overlay.hidden { display:none; }
-    .modal { background:white; border-radius:0.5rem; max-width:320px; width:90%; padding:1.5rem; box-shadow:0 2px 10px rgba(0,0,0,0.3); text-align:center; }
-    .modal input, .modal button { font-size:1rem; }
-    .modal input { width:100%; padding:0.5rem; margin-top:0.5rem; border:1px solid #ccc; border-radius:0.25rem; }
-    .modal button { margin-top:1rem; }
-    /* Toasts */
-    #toast-container { position:fixed; top:1rem; left:50%; transform:translateX(-50%); display:flex; flex-direction:column; gap:0.5rem; z-index:10000; }
-    .toast { min-width:240px; max-width:480px; background-color:#2563EB; color:white; padding:1rem 1.5rem; border-radius:0.375rem; box-shadow:0 2px 6px rgba(0,0,0,0.2); display:flex; align-items:center; justify-content:space-between; font-size:1.125rem; }
-    .toast button { background:transparent; border:none; color:white; font-weight:bold; margin-left:1rem; cursor:pointer; font-size:1.125rem; }
-    /* Confirm y DeleteKey Modals */
-    #confirmOverlay, #deleteOverlay { position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.6); display:flex; align-items:center; justify-content:center; z-index:10001; }
-    #confirmOverlay.hidden, #deleteOverlay.hidden { display:none; }
-    .modal.confirm, .modal.deleteKey { background:white; border-radius:0.5rem; padding:1.5rem; max-width:320px; width:90%; box-shadow:0 2px 10px rgba(0,0,0,0.3); text-align:center; }
-    .modal.confirm p { margin-bottom:1rem; }
-    .modal.confirm button, .modal.deleteKey button { margin:0.5rem; padding:0.5rem 1rem; font-size:1rem; border-radius:0.25rem; }
-    /* Active tab styling */
-    .tab.active { border-bottom:2px solid #F87171; color:#F87171; }
-
-    /* Botones en columna */
-    .button-group { display: flex; flex-direction: column; align-items: stretch; gap: 5px; }
-
-    /* ——— Estilos globales para todos los botones ——— */
     :root {
-      --btn-padding: 0.5rem 1rem;
-      --btn-radius: 0.375rem;
+      /* ——— Paleta de marca (verde esmeralda) ——— */
+      --brand:            #059669;   /* emerald-600 */
+      --brand-dark:       #047857;   /* emerald-700 */
+      --brand-darker:     #065F46;   /* emerald-800 */
+      --brand-soft:       #ECFDF5;   /* emerald-50  */
+      --brand-soft-2:     #D1FAE5;   /* emerald-100 */
+
+      --btn-padding: 0.5rem 1.1rem;
+      --btn-radius: 0.5rem;
       --btn-font-size: 1rem;
-      --btn-transition: background-color .2s;
-      --color-primary: #1565C0;        /* rojo */
-      --color-primary-hover: #DC2626;
-      --color-secondary: #D1D5DB;      /* gris claro */
-      --color-secondary-hover: #9CA3AF;
-      --color-dark: #374151;           /* gris oscuro */
-      --color-dark-hover: #1F2937;
-      --color-warning: #8B5E5E;        /* amarillo */
-      --color-warning-hover: #6B4542;
-      --color-on-light: #1F2937;       /* texto sobre gris claro */
-      --color-on-dark: #FFFFFF;        /* texto sobre oscuro o primary */
+      --btn-transition: all .18s ease;
+
+      --color-primary: var(--brand);
+      --color-primary-hover: var(--brand-dark);
+      --color-secondary: #E5E7EB;
+      --color-secondary-hover: #D1D5DB;
+      --color-dark: #334155;
+      --color-dark-hover: #1E293B;
+      --color-warning: #D97706;
+      --color-warning-hover: #B45309;
+      --color-on-light: #1F2937;
+      --color-on-dark: #FFFFFF;
     }
 
+    body { font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+
+    /* ——— Overlays / modales ——— */
+    .overlay { position: fixed; inset:0; background: rgba(15,23,42,0.55); display:flex; align-items:center; justify-content:center; z-index:9999; backdrop-filter: blur(2px); }
+    .overlay.hidden { display:none; }
+    .modal { background:#fff; border-radius:0.9rem; max-width:340px; width:90%; padding:1.75rem; box-shadow:0 20px 40px rgba(0,0,0,0.25); text-align:center; }
+    .modal input, .modal button { font-size:1rem; }
+    .modal input { width:100%; padding:0.6rem 0.75rem; margin-top:0.5rem; border:1px solid #CBD5E1; border-radius:0.5rem; }
+    .modal input:focus { outline:none; border-color: var(--brand); box-shadow:0 0 0 3px var(--brand-soft-2); }
+    .modal button { margin-top:1rem; }
+
+    /* ——— Toasts ——— */
+    #toast-container { position:fixed; top:1rem; left:50%; transform:translateX(-50%); display:flex; flex-direction:column; gap:0.5rem; z-index:10000; }
+    .toast { min-width:240px; max-width:480px; background: var(--brand); color:#fff; padding:0.9rem 1.25rem; border-radius:0.6rem; box-shadow:0 8px 20px rgba(5,150,105,0.35); display:flex; align-items:center; justify-content:space-between; font-size:1.05rem; }
+    .toast button { background:transparent; border:none; color:#fff; font-weight:bold; margin-left:1rem; cursor:pointer; font-size:1.15rem; }
+
+    #confirmOverlay, #deleteOverlay { position:fixed; inset:0; background:rgba(15,23,42,0.55); display:flex; align-items:center; justify-content:center; z-index:10001; backdrop-filter: blur(2px); }
+    #confirmOverlay.hidden, #deleteOverlay.hidden { display:none; }
+    .modal.confirm, .modal.deleteKey { background:#fff; border-radius:0.9rem; padding:1.75rem; max-width:340px; width:90%; box-shadow:0 20px 40px rgba(0,0,0,0.25); text-align:center; }
+    .modal.confirm p { margin-bottom:1rem; }
+    .modal.confirm button, .modal.deleteKey button { margin:0.4rem; }
+
+    /* ——— Botones ——— */
+    .button-group { display: flex; flex-direction: column; align-items: stretch; gap: 6px; }
     .btn {
       padding: var(--btn-padding);
       border-radius: var(--btn-radius);
       font-size: var(--btn-font-size);
       transition: var(--btn-transition);
-      border: none;
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
+      border: none; cursor: pointer; font-weight: 600;
+      display: inline-flex; align-items: center; justify-content: center; gap:.4rem;
     }
-    .btn--primary {
-      background: var(--color-primary);
-      color: var(--color-on-dark);
-    }
-    .btn--primary:hover {
-      background: var(--color-primary-hover);
-    }
-    .btn--secondary {
-      background: var(--color-secondary);
-      color: var(--color-on-light);
-    }
-    .btn--secondary:hover {
-      background: var(--color-secondary-hover);
-    }
-    .btn--dark {
-      background: var(--color-dark);
-      color: var(--color-on-dark);
-    }
-    .btn--dark:hover {
-      background: var(--color-dark-hover);
-    }
-    .btn--warning {
-      background: var(--color-warning);
-      color: var(--color-on-dark);
-    }
-    .btn--warning:hover {
-      background: var(--color-warning-hover);
-    }
-    .btn--full { width: 100%; }
+    .btn--primary   { background: var(--color-primary); color: var(--color-on-dark); box-shadow:0 1px 2px rgba(5,150,105,.25); }
+    .btn--primary:hover   { background: var(--color-primary-hover); transform: translateY(-1px); }
+    .btn--secondary { background: var(--color-secondary); color: var(--color-on-light); }
+    .btn--secondary:hover { background: var(--color-secondary-hover); }
+    .btn--dark      { background: var(--color-dark); color: var(--color-on-dark); }
+    .btn--dark:hover      { background: var(--color-dark-hover); }
+    .btn--warning   { background: var(--color-warning); color: var(--color-on-dark); }
+    .btn--warning:hover   { background: var(--color-warning-hover); }
+    .btn--full  { width: 100%; }
     .btn--flex1 { flex: 1; }
 
+    /* ——— Sidebar / navegación ——— */
+    .nav-item {
+      display:flex; align-items:center; gap:.75rem;
+      padding:.7rem .9rem; margin:.15rem .5rem; border-radius:.6rem;
+      color:#475569; font-weight:600; cursor:pointer;
+      transition: all .15s ease; user-select:none;
+    }
+    .nav-item svg { width:1.25rem; height:1.25rem; flex-shrink:0; }
+    .nav-item:hover { background:#F1F5F9; color:#0F172A; }
+    .nav-item.active { background: var(--brand-soft); color: var(--brand-dark); box-shadow: inset 3px 0 0 var(--brand); }
+    .nav-item.active svg { color: var(--brand); }
 
-/* Responsive */
-@media (max-width: 1024px) {
-  .max-w-4xl { max-width: 90%; }
-}
-@media (max-width: 768px) {
-  #tabs { flex-direction: column; }
-  .flex.gap-4 { flex-direction: column; }
-  .p-6 { padding: 1rem; }
-}
-@media (max-width: 480px) {
-  h1.text-2xl { font-size: 1.5rem; }
-  .modal { max-width: 95%; padding: 1rem; }
-  .btn { padding: 0.5rem; font-size: 0.875rem; }
-  textarea, input { font-size: 0.875rem; }
-}
-    
+    /* Tarjetas KPI */
+    .kpi { background:#fff; border:1px solid #EEF2F7; border-radius:1rem; padding:1.25rem 1.4rem; box-shadow:0 1px 3px rgba(15,23,42,.04); display:flex; align-items:center; gap:1rem; }
+    .kpi-icon { width:3rem; height:3rem; border-radius:.85rem; display:flex; align-items:center; justify-content:center; }
+    .kpi-icon svg { width:1.5rem; height:1.5rem; }
+
+    /* Zona drop */
+    .dropzone { border:2px dashed #CBD5E1; border-radius:1rem; background:#F8FAFC; transition: all .18s ease; }
+    .dropzone:hover, .dropzone.drag { border-color: var(--brand); background: var(--brand-soft); }
+
+    .card { background:#fff; border:1px solid #EEF2F7; border-radius:1rem; box-shadow:0 1px 3px rgba(15,23,42,.04); }
+    .field { width:100%; border:1px solid #CBD5E1; border-radius:.6rem; padding:.6rem .8rem; font-size:1rem; transition: all .15s ease; }
+    .field:focus { outline:none; border-color: var(--brand); box-shadow:0 0 0 3px var(--brand-soft-2); }
+
+    /* Sidebar responsivo */
+    #sidebar { transition: transform .25s ease; }
+    @media (max-width: 900px) {
+      #sidebar { position:fixed; z-index:60; top:0; bottom:0; left:0; transform: translateX(-100%); box-shadow:0 10px 40px rgba(0,0,0,.2); }
+      #sidebar.open { transform: translateX(0); }
+      #sidebarBackdrop.show { display:block; }
+    }
+    @media (min-width: 901px) { #sidebarToggle { display:none; } }
   </style>
 </head>
-<body class="bg-gray-100 min-h-screen flex items-start justify-center p-6">
+<body class="bg-slate-100 min-h-screen">
 
   <!-- Login Modal -->
   <div id="loginOverlay" class="overlay">
     <div class="modal">
-      <h2 class="text-xl font-semibold">Acceso Restringido</h2>
-      <p class="mt-2 text-gray-700">Ingrese su número de acceso:</p>
+      <img src="bc/Logo-losmonta.png" alt="Los Montañeros" class="mx-auto h-16 mb-3" onerror="this.style.display='none'"/>
+      <h2 class="text-xl font-bold text-slate-800">Acceso Restringido</h2>
+      <p class="mt-2 text-slate-600">Ingrese su número de acceso:</p>
       <input id="accessInput" type="password" placeholder="Número de acceso" />
-      <button
-        id="submitAccess"
-        class="btn btn--primary btn--full"
-      >
-        Enviar
-      </button>
+      <button id="submitAccess" class="btn btn--primary btn--full">Enviar</button>
       <p id="errorMsg" class="mt-2 text-red-500 hidden">Número incorrecto. Intente de nuevo.</p>
     </div>
   </div>
@@ -152,7 +145,7 @@
   <!-- Confirm Modal -->
   <div id="confirmOverlay" class="overlay hidden">
     <div id="confirmBox" class="modal confirm">
-      <p id="confirmMsg">¿Confirmar acción?</p>
+      <p id="confirmMsg" class="text-slate-700 font-medium">¿Confirmar acción?</p>
       <button id="confirmOk" class="btn btn--primary">Aceptar</button>
       <button id="confirmCancel" class="btn btn--secondary">Cancelar</button>
     </div>
@@ -161,137 +154,190 @@
   <!-- Delete Key Modal -->
   <div id="deleteOverlay" class="overlay hidden">
     <div class="modal deleteKey">
-      <h2 class="text-xl font-semibold">Clave de Eliminación</h2>
-      <p class="mt-2 text-gray-700">Ingrese la clave para eliminar:</p>
-      <input id="deleteKeyInput"
-             type="password"
-             placeholder="Clave de borrado"
-             class="mt-2 w-full border rounded px-3 py-2" />
+      <h2 class="text-xl font-bold text-slate-800">Clave de Eliminación</h2>
+      <p class="mt-2 text-slate-600">Ingrese la clave para eliminar:</p>
+      <input id="deleteKeyInput" type="password" placeholder="Clave de borrado" />
       <p id="deleteKeyError" class="mt-2 text-red-500 hidden">Clave incorrecta.</p>
-      <button
-        id="deleteKeyOk"
-        class="btn btn--primary btn--full"
-      >
-        Enviar
-      </button>
-      <button
-        id="deleteKeyCancel"
-        class="btn btn--secondary btn--full"
-      >
-        Cancelar
-      </button>
+      <button id="deleteKeyOk" class="btn btn--primary btn--full">Enviar</button>
+      <button id="deleteKeyCancel" class="btn btn--secondary btn--full">Cancelar</button>
     </div>
   </div>
 
   <!-- Toast container -->
   <div id="toast-container"></div>
 
-  <!-- Main Content -->
-  <div id="mainContent" class="w-full max-w-4xl bg-white rounded-2xl shadow-lg hidden">
+  <!-- ====== APP ====== -->
+  <div id="mainContent" class="hidden">
+    <div class="flex min-h-screen">
 
-    <!-- Título global sobre las pestañas -->
-    <div class="bg-white border-b">
-      <h1 class="text-2xl font-bold text-center py-4">DISTRIBUIDORA LOS MONTAÑEROS SAS V1</h1>
-    </div>
+      <!-- Backdrop móvil -->
+      <div id="sidebarBackdrop" class="hidden fixed inset-0 bg-black/40 z-50" onclick="closeSidebar()"></div>
 
-    <!-- Nav Tabs -->
-    <nav class="border-b bg-white shadow-sm">
-      <ul id="tabs" class="flex">
-        <li class="tab flex-1 text-center cursor-pointer px-6 py-4 active" data-tab="tab-search">Buscar</li>
-        <li class="tab flex-1 text-center cursor-pointer px-6 py-4" data-tab="tab-upload">Subir</li>
-        <li class="tab flex-1 text-center cursor-pointer px-6 py-4" data-tab="tab-list">Consultar</li>
-        <li class="tab flex-1 text-center cursor-pointer px-6 py-4" data-tab="tab-code">Búsqueda por Código</li>
-      </ul>
-    </nav>
-
-    <div class="p-6 space-y-6">
-
-      <!-- TAB SEARCH -->
-      <div id="tab-search" class="tab-content">
-        <h2 class="text-xl font-semibold mb-4">Búsqueda Inteligente</h2>
-        <textarea
-          id="searchInput"
-          rows="6"
-          class="w-full border rounded px-3 py-2 text-lg mb-4"
-          placeholder="Pega aquí tus códigos o bloque de texto…"
-        ></textarea>
-        <div class="flex gap-4 mb-4">
-          <button onclick="doSearch()" class="btn btn--primary btn--flex1 text-lg">Buscar</button>
-          <button onclick="clearSearch()" class="btn btn--secondary btn--flex1 text-lg">Limpiar</button>
+      <!-- SIDEBAR -->
+      <aside id="sidebar" class="w-64 bg-white border-r border-slate-200 flex flex-col shrink-0">
+        <!-- Marca -->
+        <div class="flex items-center gap-3 px-5 py-5 border-b border-slate-100">
+          <div class="h-11 w-11 rounded-xl bg-emerald-600 flex items-center justify-center overflow-hidden shrink-0">
+            <img src="bc/Logo-losmonta.png" alt="LM" class="h-11 w-11 object-contain" onerror="this.parentElement.innerHTML='<span class=&quot;text-white font-bold text-lg&quot;>LM</span>'"/>
+          </div>
+          <div class="leading-tight">
+            <p class="font-bold text-slate-800 text-sm">Los Montañeros</p>
+            <p class="text-xs text-slate-400">Distribuidora SAS</p>
+          </div>
         </div>
-        <div id="search-alert" class="text-red-600 font-medium text-lg mb-4"></div>
-        <div id="results-search" class="space-y-4"></div>
-      </div>
 
-      <!-- TAB UPLOAD -->
-      <div id="tab-upload" class="tab-content hidden">
-        <h2 class="text-xl font-semibold mb-4">Subir / Editar Documento</h2>
-        <form id="form-upload" enctype="multipart/form-data" class="space-y-4">
-          <input id="docId" type="hidden" name="id" />
-          <div>
-            <label class="block mb-1 text-lg">Nombre</label>
-            <input id="name" name="name" type="text" required class="w-full border rounded px-3 py-2 text-lg"/>
-          </div>
-          <div>
-            <label class="block mb-1 text-lg">Fecha</label>
-            <input id="date" name="date" type="date" required class="w-full border rounded px-3 py-2 text-lg"/>
-          </div>
-          <div>
-            <label class="block mb-1 text-lg">PDF o Documento</label>
-            <input
-              id="file"
-              name="file"
-              type="file"
-              accept="application/pdf,image/*"
-              class="w-full text-lg"
-            />
-            <p id="uploadWarning" class="mt-1 text-red-600 text-sm hidden">
-              El archivo excede los 10 MB. Por favor, sube uno menor.
-            </p>
-          </div>
-          <div>
-            <label class="block mb-1 text-lg">Códigos</label>
-            <textarea id="codes" name="codes" rows="4" class="w-full border rounded px-3 py-2 text-lg"></textarea>
-          </div>
-          <button type="submit" class="btn btn--primary btn--full text-lg">Guardar</button>
-        </form>
-      </div>
+        <!-- Nav -->
+        <nav class="flex-1 py-3">
+          <ul id="tabs">
+            <li class="tab nav-item active" data-tab="tab-search">
+              <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+              Búsqueda Voraz
+            </li>
+            <li class="tab nav-item" data-tab="tab-list">
+              <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
+              Consultar
+            </li>
+            <li class="tab nav-item" data-tab="tab-code">
+              <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z"/></svg>
+              Búsqueda por Código
+            </li>
+            <li class="tab nav-item" data-tab="tab-upload">
+              <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7 16a4 4 0 01-.88-7.9 5 5 0 019.9-1A4.5 4.5 0 0117 16H7zm5-4v6m0-6l-2 2m2-2l2 2"/></svg>
+              Subir Documento
+            </li>
+          </ul>
+        </nav>
 
-      <!-- TAB LIST -->
-      <div id="tab-list" class="tab-content hidden">
-        <h2 class="text-xl font-semibold mb-4">Consultar Documentos</h2>
-        <div class="flex gap-4 mb-4">
-          <input
-            id="consultFilterInput"
-            type="text"
-            class="flex-1 border rounded px-3 py-2 text-lg"
-            placeholder="Filtrar por nombre o PDF"
-            oninput="doConsultFilter()"
-          />
-          <button onclick="clearConsultFilter()" class="btn btn--secondary text-lg">Limpiar</button>
-          <button onclick="downloadCsv()" class="btn btn--primary text-lg">Descargar CSV</button>
-          <button onclick="downloadPdfs()" class="btn btn--dark text-lg">Descargar PDFs</button>
+        <!-- Usuario / salir -->
+        <div class="border-t border-slate-100 p-3">
+          <div class="flex items-center gap-3 px-2 py-2">
+            <div class="h-9 w-9 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold">A</div>
+            <div class="leading-tight flex-1">
+              <p class="text-sm font-semibold text-slate-700">admin</p>
+              <p class="text-xs text-slate-400">Cliente</p>
+            </div>
+          </div>
+          <button onclick="logout()" class="btn btn--secondary btn--full mt-1 text-sm">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+            Salir
+          </button>
         </div>
-        <div id="results-list" class="space-y-4"></div>
-      </div>
+      </aside>
 
-      <!-- TAB CODE -->
-      <div id="tab-code" class="tab-content hidden">
-        <h2 class="text-xl font-semibold mb-4">Búsqueda por Código</h2>
-        <div class="relative mb-4">
-          <input
-            id="codeInput"
-            type="text"
-            class="w-full border rounded px-3 py-2 text-lg"
-            placeholder="Código en MAYÚSCULAS (ej: ABC123)"
-            autocomplete="off"
-          />
-          <div id="suggestions" class="absolute top-full left-0 right-0 bg-white border rounded-b px-2 shadow max-h-48 overflow-auto hidden z-20"></div>
-        </div>
-        <button onclick="doCodeSearch()" class="btn btn--primary btn--full mb-4 text-lg">Buscar por Código</button>
-        <div id="results-code" class="space-y-4"></div>
-      </div>
+      <!-- CONTENIDO -->
+      <div class="flex-1 flex flex-col min-w-0">
+        <!-- Topbar -->
+        <header class="h-16 bg-white border-b border-slate-200 flex items-center gap-3 px-5 sticky top-0 z-40">
+          <button id="sidebarToggle" onclick="openSidebar()" class="p-2 rounded-lg hover:bg-slate-100">
+            <svg class="w-6 h-6 text-slate-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
+          </button>
+          <h1 class="text-lg font-bold text-slate-800">Gestor de Documentos</h1>
+          <span class="ml-2 text-xs font-semibold text-emerald-700 bg-emerald-50 px-2 py-1 rounded-full">V1</span>
+        </header>
 
+        <main class="p-5 sm:p-7 space-y-7 max-w-6xl w-full mx-auto">
+
+          <!-- KPIs -->
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div class="kpi">
+              <div class="kpi-icon bg-emerald-50 text-emerald-600">
+                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7 3h7l5 5v13a1 1 0 01-1 1H7a1 1 0 01-1-1V4a1 1 0 011-1z"/><path stroke-linecap="round" stroke-linejoin="round" d="M13 3v5h5"/></svg>
+              </div>
+              <div><p id="stat-docs" class="text-2xl font-bold text-slate-800">0</p><p class="text-sm text-slate-500">Documentos</p></div>
+            </div>
+            <div class="kpi">
+              <div class="kpi-icon bg-teal-50 text-teal-600">
+                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7 7h.01M7 3h5a2 2 0 011.4.6l7 7a2 2 0 010 2.8l-5 5a2 2 0 01-2.8 0l-7-7A2 2 0 013 12V7a4 4 0 014-4z"/></svg>
+              </div>
+              <div><p id="stat-codes" class="text-2xl font-bold text-slate-800">0</p><p class="text-sm text-slate-500">Códigos Únicos</p></div>
+            </div>
+            <div class="kpi">
+              <div class="kpi-icon bg-green-50 text-green-600">
+                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              </div>
+              <div><p id="stat-validados" class="text-2xl font-bold text-slate-800">0</p><p class="text-sm text-slate-500">Con PDF</p></div>
+            </div>
+          </div>
+
+          <!-- Panel -->
+          <div class="card p-6">
+
+            <!-- TAB SEARCH -->
+            <div id="tab-search" class="tab-content">
+              <h2 class="text-xl font-bold text-slate-800 mb-1">Búsqueda Inteligente</h2>
+              <p class="text-sm text-slate-500 mb-4">Pega un bloque de códigos o texto y encuentra los documentos asociados.</p>
+              <textarea id="searchInput" rows="6" class="field mb-4" placeholder="Pega aquí tus códigos o bloque de texto…"></textarea>
+              <div class="flex gap-3 mb-4">
+                <button onclick="doSearch()" class="btn btn--primary btn--flex1">Buscar</button>
+                <button onclick="clearSearch()" class="btn btn--secondary btn--flex1">Limpiar</button>
+              </div>
+              <div id="search-alert" class="text-red-600 font-medium mb-4"></div>
+              <div id="results-search" class="space-y-4"></div>
+            </div>
+
+            <!-- TAB UPLOAD -->
+            <div id="tab-upload" class="tab-content hidden">
+              <h2 class="text-xl font-bold text-slate-800 mb-1">Subir / Editar Documento</h2>
+              <p class="text-sm text-slate-500 mb-4">Adjunta el PDF y registra sus códigos asociados.</p>
+              <form id="form-upload" enctype="multipart/form-data" class="space-y-4">
+                <input id="docId" type="hidden" name="id" />
+                <div class="grid sm:grid-cols-2 gap-4">
+                  <div>
+                    <label class="block mb-1 text-sm font-semibold text-slate-600">Nombre</label>
+                    <input id="name" name="name" type="text" required class="field"/>
+                  </div>
+                  <div>
+                    <label class="block mb-1 text-sm font-semibold text-slate-600">Fecha</label>
+                    <input id="date" name="date" type="date" required class="field"/>
+                  </div>
+                </div>
+                <div>
+                  <label class="block mb-1 text-sm font-semibold text-slate-600">PDF o Documento</label>
+                  <label for="file" class="dropzone flex flex-col items-center justify-center py-8 px-4 cursor-pointer text-center">
+                    <svg class="w-10 h-10 text-slate-400 mb-2" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 16V4m0 0L8 8m4-4l4 4M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>
+                    <span id="fileLabel" class="text-slate-500">Arrastra un PDF aquí o haz clic para seleccionar</span>
+                    <input id="file" name="file" type="file" accept="application/pdf,image/*" class="hidden"/>
+                  </label>
+                  <p id="uploadWarning" class="mt-1 text-red-600 text-sm hidden">El archivo excede los 10 MB. Por favor, sube uno menor.</p>
+                </div>
+                <div>
+                  <label class="block mb-1 text-sm font-semibold text-slate-600">Códigos</label>
+                  <textarea id="codes" name="codes" rows="4" class="field" placeholder="Un código por línea"></textarea>
+                </div>
+                <button type="submit" class="btn btn--primary btn--full">Guardar</button>
+              </form>
+            </div>
+
+            <!-- TAB LIST -->
+            <div id="tab-list" class="tab-content hidden">
+              <h2 class="text-xl font-bold text-slate-800 mb-1">Consultar Documentos</h2>
+              <p class="text-sm text-slate-500 mb-4">Filtra, exporta y gestiona los documentos registrados.</p>
+              <div class="flex flex-col sm:flex-row gap-3 mb-4">
+                <input id="consultFilterInput" type="text" class="field flex-1" placeholder="Filtrar por nombre o PDF" oninput="doConsultFilter()"/>
+                <button onclick="clearConsultFilter()" class="btn btn--secondary">Limpiar</button>
+                <button onclick="downloadCsv()" class="btn btn--primary">Descargar CSV</button>
+                <button onclick="downloadPdfs()" class="btn btn--dark">Descargar PDFs</button>
+              </div>
+              <div id="results-list" class="space-y-4"></div>
+            </div>
+
+            <!-- TAB CODE -->
+            <div id="tab-code" class="tab-content hidden">
+              <h2 class="text-xl font-bold text-slate-800 mb-1">Búsqueda por Código</h2>
+              <p class="text-sm text-slate-500 mb-4">Encuentra un documento por su código exacto.</p>
+              <div class="relative mb-4">
+                <input id="codeInput" type="text" class="field" placeholder="Código en MAYÚSCULAS (ej: ABC123)" autocomplete="off"/>
+                <div id="suggestions" class="absolute top-full left-0 right-0 bg-white border border-slate-200 rounded-b-lg px-1 shadow-lg max-h-48 overflow-auto hidden z-20"></div>
+              </div>
+              <button onclick="doCodeSearch()" class="btn btn--primary btn--full mb-4">Buscar por Código</button>
+              <div id="results-code" class="space-y-4"></div>
+            </div>
+
+          </div>
+
+          <p class="text-center text-xs text-slate-400 pb-4">DISTRIBUIDORA LOS MONTAÑEROS SAS · Gestor de Documentos</p>
+        </main>
+      </div>
     </div>
   </div>
 
@@ -301,6 +347,11 @@
     const DELETION_KEY = '0101';
     let fullList = [];
     let pendingDeleteId = null;
+
+    // —————— Sidebar móvil ——————
+    function openSidebar()  { document.getElementById('sidebar').classList.add('open'); document.getElementById('sidebarBackdrop').classList.add('show'); document.getElementById('sidebarBackdrop').classList.remove('hidden'); }
+    function closeSidebar() { document.getElementById('sidebar').classList.remove('open'); document.getElementById('sidebarBackdrop').classList.remove('show'); document.getElementById('sidebarBackdrop').classList.add('hidden'); }
+    function logout() { location.reload(); }
 
     // —————— Función global clearSearch ——————
     function clearSearch() {
@@ -358,11 +409,35 @@
       };
       document.getElementById('deleteKeyCancel').onclick = () => { deleteOv.classList.add('hidden'); dkErr.classList.add('hidden'); dkInput.value = ''; };
 
+      // Mostrar nombre de archivo elegido en la zona de subida
+      const fileInputEl = document.getElementById('file');
+      const fileLabel = document.getElementById('fileLabel');
+      if (fileInputEl) {
+        fileInputEl.addEventListener('change', () => {
+          fileLabel.textContent = fileInputEl.files.length ? fileInputEl.files[0].name : 'Arrastra un PDF aquí o haz clic para seleccionar';
+        });
+        const dz = fileInputEl.closest('.dropzone');
+        ['dragenter','dragover'].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.add('drag'); }));
+        ['dragleave','drop'].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.remove('drag'); }));
+        dz.addEventListener('drop', e => { if (e.dataTransfer.files.length) { fileInputEl.files = e.dataTransfer.files; fileInputEl.dispatchEvent(new Event('change')); } });
+      }
+
+      // Estadísticas KPI
+      function updateStats() {
+        const set = new Set();
+        let conPdf = 0;
+        fullList.forEach(d => { (d.codes||[]).forEach(c => set.add(c)); if (d.path) conPdf++; });
+        document.getElementById('stat-docs').textContent = fullList.length;
+        document.getElementById('stat-codes').textContent = set.size;
+        document.getElementById('stat-validados').textContent = conPdf;
+      }
+
       // Polling list
       async function refresh() {
         const res = await fetch(`${api}?action=list&page=1&per_page=0`);
         const js  = await res.json();
         fullList = js.data || [];
+        updateStats();
 
         if (document.querySelector('.tab.active').dataset.tab === 'tab-list') {
           const term = document.getElementById('consultFilterInput').value.trim().toLowerCase();
@@ -385,6 +460,7 @@
         if (tab.dataset.tab === 'tab-list') refresh();
         if (tab.dataset.tab === 'tab-search') clearSearch();
         if (tab.dataset.tab === 'tab-code') clearCode();
+        closeSidebar();
       });
       document.querySelector('.tab.active').click();
 
@@ -392,27 +468,27 @@
       function render(items, cid, hideActions) {
         const ct = document.getElementById(cid);
         if (!items || !items.length) {
-          ct.innerHTML = '<p class="text-gray-500">No hay documentos.</p>';
+          ct.innerHTML = '<p class="text-slate-400">No hay documentos.</p>';
           return;
         }
         ct.innerHTML = items.map(d => `
-          <div class="border rounded p-4 bg-gray-50">
-            <div class="flex justify-between">
-              <div>
-                <h3 class="font-semibold text-lg">${d.name}</h3>
-                <p class="text-gray-600">${d.date}</p>
-                <p class="text-gray-600 text-sm">Archivo PDF: ${d.path}</p>
-                <a href="uploads/${d.path}" target="_blank" class="text-indigo-600 underline">Ver PDF</a>
+          <div class="border border-slate-200 rounded-xl p-4 bg-slate-50">
+            <div class="flex justify-between gap-4">
+              <div class="min-w-0">
+                <h3 class="font-semibold text-lg text-slate-800 truncate">${d.name}</h3>
+                <p class="text-slate-500 text-sm">${d.date}</p>
+                <p class="text-slate-400 text-xs truncate">Archivo PDF: ${d.path}</p>
+                <a href="uploads/${d.path}" target="_blank" class="text-emerald-600 hover:underline font-semibold text-sm mt-1 inline-block">Ver PDF</a>
               </div>
-              <div class="button-group text-right">
+              <div class="button-group text-right shrink-0">
                 ${!hideActions ? `
-                  <button onclick="editDoc(${d.id})" class="btn btn--warning px-2 py-1 text-lg">Editar</button>
-                  <button onclick="pendingDeleteId=${d.id}; document.getElementById('deleteOverlay').classList.remove('hidden'); document.getElementById('deleteKeyInput').focus();" class="btn btn--primary px-2 py-1 text-lg">Eliminar</button>
+                  <button onclick="editDoc(${d.id})" class="btn btn--warning px-3 py-1 text-sm">Editar</button>
+                  <button onclick="pendingDeleteId=${d.id}; document.getElementById('deleteOverlay').classList.remove('hidden'); document.getElementById('deleteKeyInput').focus();" class="btn btn--dark px-3 py-1 text-sm">Eliminar</button>
                 ` : ''}
-                <button data-id="${d.id}" onclick="toggleCodes(this)" class="btn btn--secondary px-2 py-1 text-lg">Ver Códigos</button>
+                <button data-id="${d.id}" onclick="toggleCodes(this)" class="btn btn--secondary px-3 py-1 text-sm">Ver Códigos</button>
               </div>
             </div>
-            <pre id="codes${d.id}" class="mt-2 p-2 bg-white rounded hidden">${(d.codes||[]).join('\n')}</pre>
+            <pre id="codes${d.id}" class="mt-2 p-2 bg-white border border-slate-100 rounded-lg hidden text-sm overflow-auto">${(d.codes||[]).join('\n')}</pre>
           </div>
         `).join('');
       }
@@ -443,7 +519,6 @@
         const f         = e.target;
         const file      = fileInput.files[0];
 
-        // 10 MB = 10 * 1024 * 1024 bytes
         if (file && file.size > 10 * 1024 * 1024) {
           warning.classList.remove('hidden');
           return;
@@ -458,6 +533,7 @@
         const js  = await res.json();
         toast(js.message || js.error);
         f.reset();
+        document.getElementById('fileLabel').textContent = 'Arrastra un PDF aquí o haz clic para seleccionar';
       };
 
       // Consultar
@@ -479,7 +555,7 @@
         timeoutId = setTimeout(async () => {
           const r = await fetch(`${api}?action=suggest&term=${encodeURIComponent(term)}`); const arr = await r.json();
           if (!arr.length) return suggest.classList.add('hidden');
-          suggest.innerHTML = arr.map(c => `<div class="py-1 px-2 hover:bg-gray-100 cursor-pointer" data-code="${c}">${c}</div>`).join('');
+          suggest.innerHTML = arr.map(c => `<div class="py-2 px-3 hover:bg-slate-100 cursor-pointer rounded" data-code="${c}">${c}</div>`).join('');
           suggest.classList.remove('hidden');
         }, 200);
       });
@@ -499,7 +575,7 @@
 
         document.getElementById('results-code').innerHTML = '';
         if (!data.length) {
-          document.getElementById('results-code').innerHTML = '<p class="text-gray-500">No hay documentos.</p>';
+          document.getElementById('results-code').innerHTML = '<p class="text-slate-400">No hay documentos.</p>';
         } else {
           render(data, 'results-code', true);
         }
