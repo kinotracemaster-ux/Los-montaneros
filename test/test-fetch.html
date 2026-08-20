@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Probar API – buscador-docs</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; background: #f9f9f9; }
+    button { margin: 5px; padding: 10px; font-size: 14px; }
+    pre { background: #222; color: #0f0; padding: 10px; margin-top: 20px; max-height: 300px; overflow-y: auto; }
+  </style>
+</head>
+<body>
+  <h2>Probar Endpoints de api.php</h2>
+  <button onclick="testSuggest()">1. SUGGEST</button>
+  <button onclick="testUpload()">2. UPLOAD</button>
+  <button onclick="testList()">3. LIST</button>
+  <button onclick="testSearch()">4. SEARCH</button>
+  <button onclick="testSearchByCode()">5. SEARCH_BY_CODE</button>
+  <button onclick="testEdit()">6. EDIT</button>
+  <button onclick="testDelete()">7. DELETE</button>
+  <button onclick="window.open('api.php?action=download_pdfs')">8. DOWNLOAD_ZIP</button>
+
+  <pre id="output">Resultados aquí...</pre>
+
+  <script>
+    const out = document.getElementById('output');
+
+    function show(data) {
+      out.textContent = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
+    }
+
+    function testSuggest() {
+      fetch('api.php?action=suggest&term=15')
+        .then(r => r.json())
+        .then(show).catch(show);
+    }
+
+    function testUpload() {
+      const form = new FormData();
+      form.append('name', 'Test Upload');
+      form.append('date', '2025-06-20');
+      form.append('codes', 'test1\ntest2');
+      form.append('file', new Blob(['contenido demo'], {type:'application/pdf'}), 'demo.pdf');
+
+      fetch('api.php?action=upload', { method: 'POST', body: form })
+        .then(r => r.json())
+        .then(show).catch(show);
+    }
+
+    function testList() {
+      fetch('api.php?action=list&page=1&per_page=5')
+        .then(r => r.json())
+        .then(show).catch(show);
+    }
+
+    function testSearch() {
+      fetch('api.php?action=search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({ codes: 'test1\ntest2' })
+      })
+      .then(r => r.json())
+      .then(show).catch(show);
+    }
+
+    function testSearchByCode() {
+      fetch('api.php?action=search_by_code&code=test1')
+        .then(r => r.json())
+        .then(show).catch(show);
+    }
+
+   function testEdit() {
+  const form = new FormData();
+  form.append('id', '1514'); // ✅ ID válido
+  form.append('name', 'Documento actualizado');
+  form.append('date', '2025-06-20');
+  form.append('codes', 'nuevo1\nnuevo2'); // códigos nuevos que reemplazarán los anteriores
+
+  fetch('api.php?action=edit', {
+    method: 'POST',
+    body: form
+  })
+  .then(r => r.text())
+  .then(t => {
+    try {
+      const data = JSON.parse(t);
+      show(data);
+    } catch (e) {
+      show({ message: "Respuesta inválida o vacía", raw: t });
+    }
+  })
+  .catch(e => show({ message: e.message }));
+}
+
+  </script>
+</body>
+</html>

@@ -1,0 +1,15 @@
+# Base de datos local
+/data/documents.db
+
+# PDFs subidos (se guardan en el servidor, no en git)
+/uploads/*
+!/uploads/.gitkeep
+
+# Sistema
+desktop.ini
+Thumbs.db
+.DS_Store
+
+# Python
+__pycache__/
+*.pyc
