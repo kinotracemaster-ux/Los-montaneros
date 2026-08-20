@@ -6,13 +6,13 @@
  *   php init_mysql.php
  */
 
-$host   = getenv('MYSQL_HOST')   ?: 'sql212.infinityfree.com';
-$port   = getenv('MYSQL_PORT')   ?: '3306';
-$dbname = getenv('MYSQL_DATABASE') ?: 'if0_39290518_dlosmonta';
-$user   = getenv('MYSQL_USER')   ?: 'if0_39290518';
-$pass   = getenv('MYSQL_PASSWORD') ?: 'gZXo1bZ8emML0x';
+$host   = getenv('MYSQL_HOST')     ?: 'localhost';
+$port   = getenv('MYSQL_PORT')     ?: '3306';
+$dbname = getenv('MYSQL_DATABASE') ?: '';
+$user   = getenv('MYSQL_USER')     ?: 'root';
+$pass   = getenv('MYSQL_PASSWORD') ?: '';
 
-$dsn = "mysql:host=$host;port=$port;dbname=$dbname;charset=utf8";
+$dsn = "mysql:host=$host;port=$port;dbname=$dbname;charset=utf8mb4";
 
 try {
     $db = new PDO($dsn, $user, $pass, [

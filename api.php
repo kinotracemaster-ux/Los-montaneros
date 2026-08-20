@@ -9,13 +9,15 @@ error_reporting(E_ALL);
 // Cabecera y configuración MySQL
 // —————————————————————————————
 header('Content-Type: application/json');
-$host   = getenv('MYSQL_HOST')   ?: 'sql212.infinityfree.com';
-$port   = getenv('MYSQL_PORT')   ?: '3306';
-$dbname = getenv('MYSQL_DATABASE') ?: 'if0_39290518_dlosmonta';
-$user   = getenv('MYSQL_USER')   ?: 'if0_39290518';
-$pass   = getenv('MYSQL_PASSWORD') ?: 'gZXo1bZ8emML0x';
+// Configuración por variables de entorno (Railway MySQL). Sin credenciales
+// en el código. Define MYSQL_HOST/PORT/DATABASE/USER/PASSWORD en el panel.
+$host   = getenv('MYSQL_HOST')     ?: 'localhost';
+$port   = getenv('MYSQL_PORT')     ?: '3306';
+$dbname = getenv('MYSQL_DATABASE') ?: '';
+$user   = getenv('MYSQL_USER')     ?: 'root';
+$pass   = getenv('MYSQL_PASSWORD') ?: '';
 
-$dsn = "mysql:host=$host;port=$port;dbname=$dbname;charset=utf8";
+$dsn = "mysql:host=$host;port=$port;dbname=$dbname;charset=utf8mb4";
 try {
     $db = new PDO($dsn, $user, $pass, [
         PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
