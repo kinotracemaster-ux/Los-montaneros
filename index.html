@@ -1,15 +1,11 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-
   <script>
-    // Interceptamos console.error
     (function(){
       const orig = console.error;
       console.error = function(...args) {
-        if (args[0] && typeof args[0] === 'string' && args[0].includes('Expected number')) {
-          return;
-        }
+        if (args[0] && typeof args[0] === 'string' && args[0].includes('Expected number')) return;
         orig.apply(console, args);
       };
       window.onerror = function() { return true; };
@@ -22,320 +18,345 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
-  <script src="https://cdn.tailwindcss.com"></script>
   <title>Gestor de Documentos · Los Montañeros</title>
+
   <style>
+    /* ============ Base / reset (sin dependencias externas) ============ */
+    *, *::before, *::after { box-sizing: border-box; }
+    * { margin: 0; padding: 0; }
+    html { font-size: 16px; }
+    body {
+      font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: #f1f5f9; color: #1f2937; min-height: 100vh; line-height: 1.45;
+    }
+    img { max-width: 100%; display: block; }
+    button { font-family: inherit; }
+    a { color: inherit; }
+    .hidden { display: none !important; }
+    svg { flex-shrink: 0; }
+
     :root {
-      /* ——— Paleta de marca (verde esmeralda) ——— */
-      --brand:            #059669;   /* emerald-600 */
-      --brand-dark:       #047857;   /* emerald-700 */
-      --brand-darker:     #065F46;   /* emerald-800 */
-      --brand-soft:       #ECFDF5;   /* emerald-50  */
-      --brand-soft-2:     #D1FAE5;   /* emerald-100 */
-
-      --btn-padding: 0.5rem 1.1rem;
-      --btn-radius: 0.5rem;
-      --btn-font-size: 1rem;
-      --btn-transition: all .18s ease;
-
-      --color-primary: var(--brand);
-      --color-primary-hover: var(--brand-dark);
-      --color-secondary: #E5E7EB;
-      --color-secondary-hover: #D1D5DB;
-      --color-dark: #334155;
-      --color-dark-hover: #1E293B;
-      --color-warning: #D97706;
-      --color-warning-hover: #B45309;
-      --color-on-light: #1F2937;
-      --color-on-dark: #FFFFFF;
+      --brand: #059669; --brand-dark: #047857; --brand-soft: #ecfdf5; --brand-soft2: #d1fae5;
+      --ink: #1e293b; --muted: #64748b; --line: #e2e8f0;
     }
 
-    body { font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
-
-    /* ——— Overlays / modales ——— */
-    .overlay { position: fixed; inset:0; background: rgba(15,23,42,0.55); display:flex; align-items:center; justify-content:center; z-index:9999; backdrop-filter: blur(2px); }
-    .overlay.hidden { display:none; }
-    .modal { background:#fff; border-radius:0.9rem; max-width:340px; width:90%; padding:1.75rem; box-shadow:0 20px 40px rgba(0,0,0,0.25); text-align:center; }
-    .modal input, .modal button { font-size:1rem; }
-    .modal input { width:100%; padding:0.6rem 0.75rem; margin-top:0.5rem; border:1px solid #CBD5E1; border-radius:0.5rem; }
-    .modal input:focus { outline:none; border-color: var(--brand); box-shadow:0 0 0 3px var(--brand-soft-2); }
-    .modal button { margin-top:1rem; }
-
-    /* ——— Toasts ——— */
-    #toast-container { position:fixed; top:1rem; left:50%; transform:translateX(-50%); display:flex; flex-direction:column; gap:0.5rem; z-index:10000; }
-    .toast { min-width:240px; max-width:480px; background: var(--brand); color:#fff; padding:0.9rem 1.25rem; border-radius:0.6rem; box-shadow:0 8px 20px rgba(5,150,105,0.35); display:flex; align-items:center; justify-content:space-between; font-size:1.05rem; }
-    .toast button { background:transparent; border:none; color:#fff; font-weight:bold; margin-left:1rem; cursor:pointer; font-size:1.15rem; }
-
-    #confirmOverlay, #deleteOverlay { position:fixed; inset:0; background:rgba(15,23,42,0.55); display:flex; align-items:center; justify-content:center; z-index:10001; backdrop-filter: blur(2px); }
-    #confirmOverlay.hidden, #deleteOverlay.hidden { display:none; }
-    .modal.confirm, .modal.deleteKey { background:#fff; border-radius:0.9rem; padding:1.75rem; max-width:340px; width:90%; box-shadow:0 20px 40px rgba(0,0,0,0.25); text-align:center; }
-    .modal.confirm p { margin-bottom:1rem; }
-    .modal.confirm button, .modal.deleteKey button { margin:0.4rem; }
-
-    /* ——— Botones ——— */
-    .button-group { display: flex; flex-direction: column; align-items: stretch; gap: 6px; }
+    /* ============ Botones ============ */
     .btn {
-      padding: var(--btn-padding);
-      border-radius: var(--btn-radius);
-      font-size: var(--btn-font-size);
-      transition: var(--btn-transition);
-      border: none; cursor: pointer; font-weight: 600;
-      display: inline-flex; align-items: center; justify-content: center; gap:.4rem;
+      display: inline-flex; align-items: center; justify-content: center; gap: .4rem;
+      padding: .55rem 1.1rem; border-radius: .5rem; border: none; cursor: pointer;
+      font-size: .95rem; font-weight: 600; transition: all .16s ease; white-space: nowrap;
     }
-    .btn--primary   { background: var(--color-primary); color: var(--color-on-dark); box-shadow:0 1px 2px rgba(5,150,105,.25); }
-    .btn--primary:hover   { background: var(--color-primary-hover); transform: translateY(-1px); }
-    .btn--secondary { background: var(--color-secondary); color: var(--color-on-light); }
-    .btn--secondary:hover { background: var(--color-secondary-hover); }
-    .btn--dark      { background: var(--color-dark); color: var(--color-on-dark); }
-    .btn--dark:hover      { background: var(--color-dark-hover); }
-    .btn--warning   { background: var(--color-warning); color: var(--color-on-dark); }
-    .btn--warning:hover   { background: var(--color-warning-hover); }
+    .btn svg { width: 1rem; height: 1rem; }
+    .btn--primary   { background: var(--brand); color: #fff; box-shadow: 0 1px 2px rgba(5,150,105,.25); }
+    .btn--primary:hover   { background: var(--brand-dark); }
+    .btn--secondary { background: #e5e7eb; color: #1f2937; }
+    .btn--secondary:hover { background: #d1d5db; }
+    .btn--dark      { background: #334155; color: #fff; }
+    .btn--dark:hover      { background: #1e293b; }
+    .btn--warning   { background: #d97706; color: #fff; }
+    .btn--warning:hover   { background: #b45309; }
     .btn--full  { width: 100%; }
     .btn--flex1 { flex: 1; }
+    .btn--sm { padding: .35rem .7rem; font-size: .85rem; }
 
-    /* ——— Sidebar / navegación ——— */
-    .nav-item {
-      display:flex; align-items:center; gap:.75rem;
-      padding:.7rem .9rem; margin:.15rem .5rem; border-radius:.6rem;
-      color:#475569; font-weight:600; cursor:pointer;
-      transition: all .15s ease; user-select:none;
+    /* ============ Campos ============ */
+    .field {
+      width: 100%; border: 1px solid #cbd5e1; border-radius: .55rem;
+      padding: .6rem .8rem; font-size: 1rem; font-family: inherit; background: #fff; color: #1f2937;
+      transition: all .15s ease;
     }
-    .nav-item svg { width:1.25rem; height:1.25rem; flex-shrink:0; }
-    .nav-item:hover { background:#F1F5F9; color:#0F172A; }
+    .field:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-soft2); }
+    textarea.field { resize: vertical; }
+    .form-label { display: block; margin-bottom: .3rem; font-size: .85rem; font-weight: 600; color: #475569; }
+
+    /* ============ Overlays / modales ============ */
+    .overlay { position: fixed; inset: 0; background: rgba(15,23,42,.55); display: flex; align-items: center; justify-content: center; z-index: 9999; padding: 1rem; }
+    .modal { background: #fff; border-radius: .9rem; max-width: 340px; width: 100%; padding: 1.75rem; box-shadow: 0 20px 40px rgba(0,0,0,.25); text-align: center; }
+    .modal h2 { font-size: 1.25rem; color: var(--ink); }
+    .modal p { color: var(--muted); margin-top: .5rem; }
+    .modal input { width: 100%; padding: .6rem .75rem; margin-top: .6rem; border: 1px solid #cbd5e1; border-radius: .5rem; font-size: 1rem; }
+    .modal input:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-soft2); }
+    .modal .btn { margin-top: .9rem; }
+    .modal-logo { height: 56px; margin: 0 auto .75rem; }
+    .err { margin-top: .6rem; color: #ef4444; font-size: .9rem; }
+
+    /* ============ Toasts ============ */
+    #toast-container { position: fixed; top: 1rem; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; gap: .5rem; z-index: 10000; }
+    .toast { min-width: 240px; max-width: 90vw; background: var(--brand); color: #fff; padding: .85rem 1.2rem; border-radius: .6rem; box-shadow: 0 8px 20px rgba(5,150,105,.35); display: flex; align-items: center; justify-content: space-between; gap: 1rem; font-size: 1rem; }
+    .toast button { background: transparent; border: none; color: #fff; font-weight: bold; cursor: pointer; font-size: 1.15rem; }
+
+    /* ============ Layout app ============ */
+    .app { display: flex; min-height: 100vh; }
+    .sidebar { width: 240px; background: #fff; border-right: 1px solid var(--line); display: flex; flex-direction: column; flex-shrink: 0; }
+    .brand { display: flex; align-items: center; gap: .75rem; padding: 1.05rem 1.15rem; border-bottom: 1px solid #f1f5f9; }
+    .brand-logo { height: 44px; width: 44px; border-radius: .75rem; background: var(--brand); display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0; color: #fff; font-weight: 700; }
+    .brand-logo img { height: 44px; width: 44px; object-fit: contain; }
+    .brand-name { font-weight: 700; font-size: .9rem; color: var(--ink); line-height: 1.15; }
+    .brand-sub  { font-size: .72rem; color: #94a3b8; }
+    .nav { flex: 1; padding: .6rem 0; list-style: none; }
+    .nav-item { display: flex; align-items: center; gap: .7rem; padding: .65rem .85rem; margin: .12rem .5rem; border-radius: .55rem; color: #475569; font-weight: 600; font-size: .95rem; cursor: pointer; user-select: none; transition: all .14s ease; }
+    .nav-item svg { width: 1.2rem; height: 1.2rem; }
+    .nav-item:hover { background: #f1f5f9; color: #0f172a; }
     .nav-item.active { background: var(--brand-soft); color: var(--brand-dark); box-shadow: inset 3px 0 0 var(--brand); }
     .nav-item.active svg { color: var(--brand); }
+    .side-foot { border-top: 1px solid #f1f5f9; padding: .75rem; }
+    .user { display: flex; align-items: center; gap: .7rem; padding: .3rem .35rem .6rem; }
+    .avatar { height: 36px; width: 36px; border-radius: 50%; background: var(--brand-soft2); color: var(--brand-dark); display: flex; align-items: center; justify-content: center; font-weight: 700; flex-shrink: 0; }
+    .user b { font-size: .88rem; color: #334155; }
+    .user span { font-size: .72rem; color: #94a3b8; }
 
-    /* Tarjetas KPI */
-    .kpi { background:#fff; border:1px solid #EEF2F7; border-radius:1rem; padding:1.25rem 1.4rem; box-shadow:0 1px 3px rgba(15,23,42,.04); display:flex; align-items:center; gap:1rem; }
-    .kpi-icon { width:3rem; height:3rem; border-radius:.85rem; display:flex; align-items:center; justify-content:center; }
-    .kpi-icon svg { width:1.5rem; height:1.5rem; }
+    .main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+    .topbar { height: 60px; background: #fff; border-bottom: 1px solid var(--line); display: flex; align-items: center; gap: .75rem; padding: 0 1.25rem; position: sticky; top: 0; z-index: 40; }
+    .topbar h1 { font-size: 1.15rem; font-weight: 700; color: var(--ink); }
+    .badge { font-size: .72rem; font-weight: 700; color: var(--brand-dark); background: var(--brand-soft); padding: .2rem .55rem; border-radius: 999px; }
+    .hamburger { display: none; background: none; border: none; cursor: pointer; padding: .35rem; border-radius: .4rem; }
+    .hamburger:hover { background: #f1f5f9; }
+    .hamburger svg { width: 1.5rem; height: 1.5rem; color: #475569; }
 
-    /* Zona drop */
-    .dropzone { border:2px dashed #CBD5E1; border-radius:1rem; background:#F8FAFC; transition: all .18s ease; }
+    .content { padding: 1.4rem; max-width: 1100px; width: 100%; margin: 0 auto; display: flex; flex-direction: column; gap: 1.4rem; }
+
+    /* KPIs */
+    .kpi-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
+    .kpi { background: #fff; border: 1px solid #eef2f7; border-radius: 1rem; padding: 1.15rem 1.3rem; box-shadow: 0 1px 3px rgba(15,23,42,.04); display: flex; align-items: center; gap: 1rem; }
+    .kpi-icon { width: 3rem; height: 3rem; border-radius: .85rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .kpi-icon svg { width: 1.5rem; height: 1.5rem; }
+    .kpi-num { font-size: 1.6rem; font-weight: 700; color: var(--ink); line-height: 1.1; }
+    .kpi-label { font-size: .85rem; color: var(--muted); }
+    .ic-emerald { background: #ecfdf5; color: #059669; }
+    .ic-teal { background: #f0fdfa; color: #0d9488; }
+    .ic-green { background: #f0fdf4; color: #16a34a; }
+
+    /* Card panel */
+    .card { background: #fff; border: 1px solid #eef2f7; border-radius: 1rem; box-shadow: 0 1px 3px rgba(15,23,42,.04); padding: 1.5rem; }
+    .panel-title { font-size: 1.2rem; font-weight: 700; color: var(--ink); }
+    .panel-sub { font-size: .875rem; color: var(--muted); margin: .15rem 0 1rem; }
+    .row { display: flex; gap: .75rem; margin-bottom: 1rem; flex-wrap: wrap; }
+    .row > .btn { flex: 0 0 auto; }
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    .stack { display: flex; flex-direction: column; gap: 1rem; }
+    .mb { margin-bottom: 1rem; }
+    .alert { color: #dc2626; font-weight: 600; margin-bottom: 1rem; }
+
+    /* Dropzone */
+    .dropzone { border: 2px dashed #cbd5e1; border-radius: 1rem; background: #f8fafc; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 2rem 1rem; cursor: pointer; transition: all .16s ease; color: var(--muted); }
     .dropzone:hover, .dropzone.drag { border-color: var(--brand); background: var(--brand-soft); }
+    .dropzone svg { width: 2.5rem; height: 2.5rem; color: #94a3b8; margin-bottom: .5rem; }
 
-    .card { background:#fff; border:1px solid #EEF2F7; border-radius:1rem; box-shadow:0 1px 3px rgba(15,23,42,.04); }
-    .field { width:100%; border:1px solid #CBD5E1; border-radius:.6rem; padding:.6rem .8rem; font-size:1rem; transition: all .15s ease; }
-    .field:focus { outline:none; border-color: var(--brand); box-shadow:0 0 0 3px var(--brand-soft-2); }
+    /* Autocomplete */
+    .suggest-wrap { position: relative; margin-bottom: 1rem; }
+    #suggestions { position: absolute; top: 100%; left: 0; right: 0; background: #fff; border: 1px solid var(--line); border-top: none; border-radius: 0 0 .55rem .55rem; max-height: 12rem; overflow: auto; box-shadow: 0 10px 20px rgba(0,0,0,.08); z-index: 30; }
+    #suggestions div { padding: .55rem .8rem; cursor: pointer; }
+    #suggestions div:hover { background: #f1f5f9; }
 
-    /* Sidebar responsivo */
-    #sidebar { transition: transform .25s ease; }
-    @media (max-width: 900px) {
-      #sidebar { position:fixed; z-index:60; top:0; bottom:0; left:0; transform: translateX(-100%); box-shadow:0 10px 40px rgba(0,0,0,.2); }
-      #sidebar.open { transform: translateX(0); }
-      #sidebarBackdrop.show { display:block; }
+    /* Resultados como tarjetas (búsqueda / código) */
+    .doc { border: 1px solid var(--line); border-radius: .9rem; padding: 1rem; background: #f8fafc; margin-bottom: .9rem; }
+    .doc-head { display: flex; justify-content: space-between; gap: 1rem; }
+    .doc h3 { font-size: 1.05rem; font-weight: 600; color: var(--ink); }
+    .doc .meta { font-size: .85rem; color: var(--muted); }
+    .doc .file { font-size: .75rem; color: #94a3b8; word-break: break-all; }
+    .link { color: var(--brand); font-weight: 600; text-decoration: none; font-size: .9rem; display: inline-block; margin-top: .25rem; }
+    .link:hover { text-decoration: underline; }
+    .actions { display: flex; flex-direction: column; gap: .35rem; align-items: stretch; flex-shrink: 0; }
+    .codes-pre { margin-top: .6rem; padding: .55rem; background: #fff; border: 1px solid #eef2f7; border-radius: .5rem; font-size: .85rem; overflow: auto; white-space: pre-wrap; font-family: ui-monospace, monospace; }
+    .empty { color: #94a3b8; }
+
+    /* ===== Tabla Consultar ===== */
+    .table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: .9rem; }
+    table.docs { width: 100%; border-collapse: collapse; font-size: .9rem; min-width: 640px; }
+    table.docs thead th { text-align: left; background: #f8fafc; color: #64748b; font-weight: 700; font-size: .78rem; text-transform: uppercase; letter-spacing: .03em; padding: .7rem .9rem; border-bottom: 1px solid var(--line); }
+    table.docs tbody td { padding: .7rem .9rem; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
+    table.docs tbody tr:last-child td { border-bottom: none; }
+    table.docs tbody tr:hover { background: #f8fafc; }
+    table.docs .t-name { font-weight: 600; color: var(--ink); }
+    table.docs .t-actions { display: flex; gap: .35rem; white-space: nowrap; }
+    .chip { display: inline-block; background: var(--brand-soft); color: var(--brand-dark); border-radius: 999px; padding: .1rem .5rem; font-size: .75rem; font-weight: 600; margin: .1rem .15rem 0 0; }
+
+    /* Backdrop móvil */
+    #sidebarBackdrop { position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 50; }
+
+    /* ============ Responsivo ============ */
+    @media (max-width: 860px) {
+      .sidebar { position: fixed; top: 0; bottom: 0; left: 0; z-index: 60; transform: translateX(-100%); transition: transform .25s ease; box-shadow: 0 10px 40px rgba(0,0,0,.2); }
+      .sidebar.open { transform: translateX(0); }
+      .hamburger { display: inline-flex; }
     }
-    @media (min-width: 901px) { #sidebarToggle { display:none; } }
+    @media (max-width: 700px) { .kpi-grid { grid-template-columns: 1fr; } }
+    @media (max-width: 600px) { .grid2 { grid-template-columns: 1fr; } }
   </style>
 </head>
-<body class="bg-slate-100 min-h-screen">
+<body>
 
-  <!-- Login Modal -->
+  <!-- Login -->
   <div id="loginOverlay" class="overlay">
     <div class="modal">
-      <img src="bc/Logo-losmonta.png" alt="Los Montañeros" class="mx-auto h-16 mb-3" onerror="this.style.display='none'"/>
-      <h2 class="text-xl font-bold text-slate-800">Acceso Restringido</h2>
-      <p class="mt-2 text-slate-600">Ingrese su número de acceso:</p>
+      <img src="bc/Logo-losmonta.png" alt="Los Montañeros" class="modal-logo" onerror="this.style.display='none'"/>
+      <h2>Acceso Restringido</h2>
+      <p>Ingrese su número de acceso:</p>
       <input id="accessInput" type="password" placeholder="Número de acceso" />
       <button id="submitAccess" class="btn btn--primary btn--full">Enviar</button>
-      <p id="errorMsg" class="mt-2 text-red-500 hidden">Número incorrecto. Intente de nuevo.</p>
+      <p id="errorMsg" class="err hidden">Número incorrecto. Intente de nuevo.</p>
     </div>
   </div>
 
-  <!-- Confirm Modal -->
+  <!-- Confirm -->
   <div id="confirmOverlay" class="overlay hidden">
-    <div id="confirmBox" class="modal confirm">
-      <p id="confirmMsg" class="text-slate-700 font-medium">¿Confirmar acción?</p>
+    <div id="confirmBox" class="modal">
+      <p id="confirmMsg" style="color:#334155;font-weight:500">¿Confirmar acción?</p>
       <button id="confirmOk" class="btn btn--primary">Aceptar</button>
       <button id="confirmCancel" class="btn btn--secondary">Cancelar</button>
     </div>
   </div>
 
-  <!-- Delete Key Modal -->
+  <!-- Delete key -->
   <div id="deleteOverlay" class="overlay hidden">
-    <div class="modal deleteKey">
-      <h2 class="text-xl font-bold text-slate-800">Clave de Eliminación</h2>
-      <p class="mt-2 text-slate-600">Ingrese la clave para eliminar:</p>
+    <div class="modal">
+      <h2>Clave de Eliminación</h2>
+      <p>Ingrese la clave para eliminar:</p>
       <input id="deleteKeyInput" type="password" placeholder="Clave de borrado" />
-      <p id="deleteKeyError" class="mt-2 text-red-500 hidden">Clave incorrecta.</p>
+      <p id="deleteKeyError" class="err hidden">Clave incorrecta.</p>
       <button id="deleteKeyOk" class="btn btn--primary btn--full">Enviar</button>
       <button id="deleteKeyCancel" class="btn btn--secondary btn--full">Cancelar</button>
     </div>
   </div>
 
-  <!-- Toast container -->
   <div id="toast-container"></div>
 
-  <!-- ====== APP ====== -->
+  <!-- APP -->
   <div id="mainContent" class="hidden">
-    <div class="flex min-h-screen">
+    <div class="app">
+      <div id="sidebarBackdrop" class="hidden" onclick="closeSidebar()"></div>
 
-      <!-- Backdrop móvil -->
-      <div id="sidebarBackdrop" class="hidden fixed inset-0 bg-black/40 z-50" onclick="closeSidebar()"></div>
-
-      <!-- SIDEBAR -->
-      <aside id="sidebar" class="w-64 bg-white border-r border-slate-200 flex flex-col shrink-0">
-        <!-- Marca -->
-        <div class="flex items-center gap-3 px-5 py-5 border-b border-slate-100">
-          <div class="h-11 w-11 rounded-xl bg-emerald-600 flex items-center justify-center overflow-hidden shrink-0">
-            <img src="bc/Logo-losmonta.png" alt="LM" class="h-11 w-11 object-contain" onerror="this.parentElement.innerHTML='<span class=&quot;text-white font-bold text-lg&quot;>LM</span>'"/>
-          </div>
-          <div class="leading-tight">
-            <p class="font-bold text-slate-800 text-sm">Los Montañeros</p>
-            <p class="text-xs text-slate-400">Distribuidora SAS</p>
+      <aside id="sidebar" class="sidebar">
+        <div class="brand">
+          <div class="brand-logo"><img src="bc/Logo-losmonta.png" alt="LM" onerror="this.parentElement.textContent='LM'"/></div>
+          <div>
+            <div class="brand-name">Los Montañeros</div>
+            <div class="brand-sub">Distribuidora SAS</div>
           </div>
         </div>
 
-        <!-- Nav -->
-        <nav class="flex-1 py-3">
-          <ul id="tabs">
-            <li class="tab nav-item active" data-tab="tab-search">
-              <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-              Búsqueda Voraz
-            </li>
-            <li class="tab nav-item" data-tab="tab-list">
-              <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
-              Consultar
-            </li>
-            <li class="tab nav-item" data-tab="tab-code">
-              <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z"/></svg>
-              Búsqueda por Código
-            </li>
-            <li class="tab nav-item" data-tab="tab-upload">
-              <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7 16a4 4 0 01-.88-7.9 5 5 0 019.9-1A4.5 4.5 0 0117 16H7zm5-4v6m0-6l-2 2m2-2l2 2"/></svg>
-              Subir Documento
-            </li>
-          </ul>
-        </nav>
+        <ul class="nav" id="tabs">
+          <li class="tab nav-item active" data-tab="tab-search">
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+            Búsqueda Voraz
+          </li>
+          <li class="tab nav-item" data-tab="tab-list">
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
+            Consultar
+          </li>
+          <li class="tab nav-item" data-tab="tab-code">
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z"/></svg>
+            Búsqueda por Código
+          </li>
+          <li class="tab nav-item" data-tab="tab-upload">
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7 16a4 4 0 01-.88-7.9 5 5 0 019.9-1A4.5 4.5 0 0117 16H7zm5-4v6m0-6l-2 2m2-2l2 2"/></svg>
+            Subir Documento
+          </li>
+        </ul>
 
-        <!-- Usuario / salir -->
-        <div class="border-t border-slate-100 p-3">
-          <div class="flex items-center gap-3 px-2 py-2">
-            <div class="h-9 w-9 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold">A</div>
-            <div class="leading-tight flex-1">
-              <p class="text-sm font-semibold text-slate-700">admin</p>
-              <p class="text-xs text-slate-400">Cliente</p>
-            </div>
+        <div class="side-foot">
+          <div class="user">
+            <div class="avatar">A</div>
+            <div><b>admin</b><br><span>Cliente</span></div>
           </div>
-          <button onclick="logout()" class="btn btn--secondary btn--full mt-1 text-sm">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+          <button onclick="logout()" class="btn btn--secondary btn--full btn--sm">
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
             Salir
           </button>
         </div>
       </aside>
 
-      <!-- CONTENIDO -->
-      <div class="flex-1 flex flex-col min-w-0">
-        <!-- Topbar -->
-        <header class="h-16 bg-white border-b border-slate-200 flex items-center gap-3 px-5 sticky top-0 z-40">
-          <button id="sidebarToggle" onclick="openSidebar()" class="p-2 rounded-lg hover:bg-slate-100">
-            <svg class="w-6 h-6 text-slate-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
+      <div class="main">
+        <header class="topbar">
+          <button class="hamburger" onclick="openSidebar()">
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
           </button>
-          <h1 class="text-lg font-bold text-slate-800">Gestor de Documentos</h1>
-          <span class="ml-2 text-xs font-semibold text-emerald-700 bg-emerald-50 px-2 py-1 rounded-full">V1</span>
+          <h1>Gestor de Documentos</h1>
+          <span class="badge">V1</span>
         </header>
 
-        <main class="p-5 sm:p-7 space-y-7 max-w-6xl w-full mx-auto">
-
+        <main class="content">
           <!-- KPIs -->
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div class="kpi-grid">
             <div class="kpi">
-              <div class="kpi-icon bg-emerald-50 text-emerald-600">
-                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7 3h7l5 5v13a1 1 0 01-1 1H7a1 1 0 01-1-1V4a1 1 0 011-1z"/><path stroke-linecap="round" stroke-linejoin="round" d="M13 3v5h5"/></svg>
-              </div>
-              <div><p id="stat-docs" class="text-2xl font-bold text-slate-800">0</p><p class="text-sm text-slate-500">Documentos</p></div>
+              <div class="kpi-icon ic-emerald"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7 3h7l5 5v13a1 1 0 01-1 1H7a1 1 0 01-1-1V4a1 1 0 011-1z"/><path stroke-linecap="round" stroke-linejoin="round" d="M13 3v5h5"/></svg></div>
+              <div><div id="stat-docs" class="kpi-num">0</div><div class="kpi-label">Documentos</div></div>
             </div>
             <div class="kpi">
-              <div class="kpi-icon bg-teal-50 text-teal-600">
-                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7 7h.01M7 3h5a2 2 0 011.4.6l7 7a2 2 0 010 2.8l-5 5a2 2 0 01-2.8 0l-7-7A2 2 0 013 12V7a4 4 0 014-4z"/></svg>
-              </div>
-              <div><p id="stat-codes" class="text-2xl font-bold text-slate-800">0</p><p class="text-sm text-slate-500">Códigos Únicos</p></div>
+              <div class="kpi-icon ic-teal"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7 7h.01M7 3h5a2 2 0 011.4.6l7 7a2 2 0 010 2.8l-5 5a2 2 0 01-2.8 0l-7-7A2 2 0 013 12V7a4 4 0 014-4z"/></svg></div>
+              <div><div id="stat-codes" class="kpi-num">0</div><div class="kpi-label">Códigos Únicos</div></div>
             </div>
             <div class="kpi">
-              <div class="kpi-icon bg-green-50 text-green-600">
-                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-              </div>
-              <div><p id="stat-validados" class="text-2xl font-bold text-slate-800">0</p><p class="text-sm text-slate-500">Con PDF</p></div>
+              <div class="kpi-icon ic-green"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div>
+              <div><div id="stat-validados" class="kpi-num">0</div><div class="kpi-label">Con PDF</div></div>
             </div>
           </div>
 
-          <!-- Panel -->
-          <div class="card p-6">
-
-            <!-- TAB SEARCH -->
+          <div class="card">
+            <!-- SEARCH -->
             <div id="tab-search" class="tab-content">
-              <h2 class="text-xl font-bold text-slate-800 mb-1">Búsqueda Inteligente</h2>
-              <p class="text-sm text-slate-500 mb-4">Pega un bloque de códigos o texto y encuentra los documentos asociados.</p>
-              <textarea id="searchInput" rows="6" class="field mb-4" placeholder="Pega aquí tus códigos o bloque de texto…"></textarea>
-              <div class="flex gap-3 mb-4">
+              <div class="panel-title">Búsqueda Inteligente</div>
+              <div class="panel-sub">Pega un bloque de códigos o texto y encuentra los documentos asociados.</div>
+              <textarea id="searchInput" rows="6" class="field mb" placeholder="Pega aquí tus códigos o bloque de texto…"></textarea>
+              <div class="row">
                 <button onclick="doSearch()" class="btn btn--primary btn--flex1">Buscar</button>
                 <button onclick="clearSearch()" class="btn btn--secondary btn--flex1">Limpiar</button>
               </div>
-              <div id="search-alert" class="text-red-600 font-medium mb-4"></div>
-              <div id="results-search" class="space-y-4"></div>
+              <div id="search-alert" class="alert"></div>
+              <div id="results-search"></div>
             </div>
 
-            <!-- TAB UPLOAD -->
+            <!-- UPLOAD -->
             <div id="tab-upload" class="tab-content hidden">
-              <h2 class="text-xl font-bold text-slate-800 mb-1">Subir / Editar Documento</h2>
-              <p class="text-sm text-slate-500 mb-4">Adjunta el PDF y registra sus códigos asociados.</p>
-              <form id="form-upload" enctype="multipart/form-data" class="space-y-4">
+              <div class="panel-title">Subir / Editar Documento</div>
+              <div class="panel-sub">Adjunta el PDF y registra sus códigos asociados.</div>
+              <form id="form-upload" enctype="multipart/form-data" class="stack">
                 <input id="docId" type="hidden" name="id" />
-                <div class="grid sm:grid-cols-2 gap-4">
-                  <div>
-                    <label class="block mb-1 text-sm font-semibold text-slate-600">Nombre</label>
-                    <input id="name" name="name" type="text" required class="field"/>
-                  </div>
-                  <div>
-                    <label class="block mb-1 text-sm font-semibold text-slate-600">Fecha</label>
-                    <input id="date" name="date" type="date" required class="field"/>
-                  </div>
+                <div class="grid2">
+                  <div><label class="form-label">Nombre</label><input id="name" name="name" type="text" required class="field"/></div>
+                  <div><label class="form-label">Fecha</label><input id="date" name="date" type="date" required class="field"/></div>
                 </div>
                 <div>
-                  <label class="block mb-1 text-sm font-semibold text-slate-600">PDF o Documento</label>
-                  <label for="file" class="dropzone flex flex-col items-center justify-center py-8 px-4 cursor-pointer text-center">
-                    <svg class="w-10 h-10 text-slate-400 mb-2" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 16V4m0 0L8 8m4-4l4 4M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>
-                    <span id="fileLabel" class="text-slate-500">Arrastra un PDF aquí o haz clic para seleccionar</span>
+                  <label class="form-label">PDF o Documento</label>
+                  <label for="file" class="dropzone">
+                    <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 16V4m0 0L8 8m4-4l4 4M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>
+                    <span id="fileLabel">Arrastra un PDF aquí o haz clic para seleccionar</span>
                     <input id="file" name="file" type="file" accept="application/pdf,image/*" class="hidden"/>
                   </label>
-                  <p id="uploadWarning" class="mt-1 text-red-600 text-sm hidden">El archivo excede los 10 MB. Por favor, sube uno menor.</p>
+                  <p id="uploadWarning" class="err hidden">El archivo excede los 10 MB. Por favor, sube uno menor.</p>
                 </div>
-                <div>
-                  <label class="block mb-1 text-sm font-semibold text-slate-600">Códigos</label>
-                  <textarea id="codes" name="codes" rows="4" class="field" placeholder="Un código por línea"></textarea>
-                </div>
+                <div><label class="form-label">Códigos</label><textarea id="codes" name="codes" rows="4" class="field" placeholder="Un código por línea"></textarea></div>
                 <button type="submit" class="btn btn--primary btn--full">Guardar</button>
               </form>
             </div>
 
-            <!-- TAB LIST -->
+            <!-- LIST (tabla) -->
             <div id="tab-list" class="tab-content hidden">
-              <h2 class="text-xl font-bold text-slate-800 mb-1">Consultar Documentos</h2>
-              <p class="text-sm text-slate-500 mb-4">Filtra, exporta y gestiona los documentos registrados.</p>
-              <div class="flex flex-col sm:flex-row gap-3 mb-4">
-                <input id="consultFilterInput" type="text" class="field flex-1" placeholder="Filtrar por nombre o PDF" oninput="doConsultFilter()"/>
+              <div class="panel-title">Consultar Documentos</div>
+              <div class="panel-sub">Filtra, exporta y gestiona los documentos registrados.</div>
+              <div class="row">
+                <input id="consultFilterInput" type="text" class="field" style="flex:1;min-width:180px" placeholder="Filtrar por nombre o PDF" oninput="doConsultFilter()"/>
                 <button onclick="clearConsultFilter()" class="btn btn--secondary">Limpiar</button>
                 <button onclick="downloadCsv()" class="btn btn--primary">Descargar CSV</button>
                 <button onclick="downloadPdfs()" class="btn btn--dark">Descargar PDFs</button>
               </div>
-              <div id="results-list" class="space-y-4"></div>
+              <div id="results-list"></div>
             </div>
 
-            <!-- TAB CODE -->
+            <!-- CODE -->
             <div id="tab-code" class="tab-content hidden">
-              <h2 class="text-xl font-bold text-slate-800 mb-1">Búsqueda por Código</h2>
-              <p class="text-sm text-slate-500 mb-4">Encuentra un documento por su código exacto.</p>
-              <div class="relative mb-4">
+              <div class="panel-title">Búsqueda por Código</div>
+              <div class="panel-sub">Encuentra un documento por su código exacto.</div>
+              <div class="suggest-wrap">
                 <input id="codeInput" type="text" class="field" placeholder="Código en MAYÚSCULAS (ej: ABC123)" autocomplete="off"/>
-                <div id="suggestions" class="absolute top-full left-0 right-0 bg-white border border-slate-200 rounded-b-lg px-1 shadow-lg max-h-48 overflow-auto hidden z-20"></div>
+                <div id="suggestions" class="hidden"></div>
               </div>
-              <button onclick="doCodeSearch()" class="btn btn--primary btn--full mb-4">Buscar por Código</button>
-              <div id="results-code" class="space-y-4"></div>
+              <button onclick="doCodeSearch()" class="btn btn--primary btn--full mb">Buscar por Código</button>
+              <div id="results-code"></div>
             </div>
-
           </div>
 
-          <p class="text-center text-xs text-slate-400 pb-4">DISTRIBUIDORA LOS MONTAÑEROS SAS · Gestor de Documentos</p>
+          <p style="text-align:center;font-size:.75rem;color:#94a3b8;padding-bottom:1rem">DISTRIBUIDORA LOS MONTAÑEROS SAS · Gestor de Documentos</p>
         </main>
       </div>
     </div>
@@ -348,19 +369,18 @@
     let fullList = [];
     let pendingDeleteId = null;
 
-    // —————— Sidebar móvil ——————
-    function openSidebar()  { document.getElementById('sidebar').classList.add('open'); document.getElementById('sidebarBackdrop').classList.add('show'); document.getElementById('sidebarBackdrop').classList.remove('hidden'); }
-    function closeSidebar() { document.getElementById('sidebar').classList.remove('open'); document.getElementById('sidebarBackdrop').classList.remove('show'); document.getElementById('sidebarBackdrop').classList.add('hidden'); }
-    function logout() { location.reload(); }
+    function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
-    // —————— Función global clearSearch ——————
-    function clearSearch() {
+    function openSidebar(){ document.getElementById('sidebar').classList.add('open'); document.getElementById('sidebarBackdrop').classList.remove('hidden'); }
+    function closeSidebar(){ document.getElementById('sidebar').classList.remove('open'); document.getElementById('sidebarBackdrop').classList.add('hidden'); }
+    function logout(){ location.reload(); }
+
+    function clearSearch(){
       document.getElementById('searchInput').value = '';
       document.getElementById('results-search').innerHTML = '';
       document.getElementById('search-alert').innerText = '';
     }
 
-    // Login logic
     document.getElementById('submitAccess').onclick = () => {
       const v = document.getElementById('accessInput').value;
       if (v === ACCESS_KEY) {
@@ -373,16 +393,14 @@
     };
     document.getElementById('accessInput').addEventListener('keypress', e => { if (e.key === 'Enter') document.getElementById('submitAccess').click(); });
 
-    // Toast
     function toast(msg, d = 3000) {
       const c = document.getElementById('toast-container');
       const e = document.createElement('div'); e.className = 'toast';
-      e.innerHTML = `<span>${msg}</span><button onclick="this.parentElement.remove()">×</button>`;
+      e.innerHTML = `<span>${esc(msg)}</span><button onclick="this.parentElement.remove()">×</button>`;
       c.appendChild(e);
       setTimeout(() => e.remove(), d);
     }
 
-    // Confirm dialog
     function confirmDialog(msg) {
       return new Promise(resolve => {
         const ov = document.getElementById('confirmOverlay');
@@ -393,65 +411,50 @@
       });
     }
 
-    // Init app
     function initApp() {
       const deleteOv = document.getElementById('deleteOverlay');
       const dkInput = document.getElementById('deleteKeyInput');
       const dkErr = document.getElementById('deleteKeyError');
 
       document.getElementById('deleteKeyOk').onclick = async () => {
-        if (dkInput.value !== DELETION_KEY) {
-          dkErr.classList.remove('hidden'); dkInput.value = ''; dkInput.focus(); return;
-        }
-        deleteOv.classList.add('hidden'); dkErr.classList.add('hidden'); dkInput.value = '';
+        if (dkInput.value !== DELETION_KEY) { dkErr.classList.remove('hidden'); dkInput.value=''; dkInput.focus(); return; }
+        deleteOv.classList.add('hidden'); dkErr.classList.add('hidden'); dkInput.value='';
         const ok = await confirmDialog('¿Eliminar este documento?'); if (!ok) return;
         await deleteDoc(pendingDeleteId);
       };
-      document.getElementById('deleteKeyCancel').onclick = () => { deleteOv.classList.add('hidden'); dkErr.classList.add('hidden'); dkInput.value = ''; };
+      document.getElementById('deleteKeyCancel').onclick = () => { deleteOv.classList.add('hidden'); dkErr.classList.add('hidden'); dkInput.value=''; };
 
-      // Mostrar nombre de archivo elegido en la zona de subida
+      // Zona de subida
       const fileInputEl = document.getElementById('file');
       const fileLabel = document.getElementById('fileLabel');
-      if (fileInputEl) {
-        fileInputEl.addEventListener('change', () => {
-          fileLabel.textContent = fileInputEl.files.length ? fileInputEl.files[0].name : 'Arrastra un PDF aquí o haz clic para seleccionar';
-        });
-        const dz = fileInputEl.closest('.dropzone');
-        ['dragenter','dragover'].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.add('drag'); }));
-        ['dragleave','drop'].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.remove('drag'); }));
-        dz.addEventListener('drop', e => { if (e.dataTransfer.files.length) { fileInputEl.files = e.dataTransfer.files; fileInputEl.dispatchEvent(new Event('change')); } });
-      }
+      const DEF_LABEL = 'Arrastra un PDF aquí o haz clic para seleccionar';
+      fileInputEl.addEventListener('change', () => { fileLabel.textContent = fileInputEl.files.length ? fileInputEl.files[0].name : DEF_LABEL; });
+      const dz = fileInputEl.closest('.dropzone');
+      ['dragenter','dragover'].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.add('drag'); }));
+      ['dragleave','drop'].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.remove('drag'); }));
+      dz.addEventListener('drop', e => { if (e.dataTransfer.files.length) { fileInputEl.files = e.dataTransfer.files; fileInputEl.dispatchEvent(new Event('change')); } });
 
-      // Estadísticas KPI
       function updateStats() {
-        const set = new Set();
-        let conPdf = 0;
+        const set = new Set(); let conPdf = 0;
         fullList.forEach(d => { (d.codes||[]).forEach(c => set.add(c)); if (d.path) conPdf++; });
         document.getElementById('stat-docs').textContent = fullList.length;
         document.getElementById('stat-codes').textContent = set.size;
         document.getElementById('stat-validados').textContent = conPdf;
       }
 
-      // Polling list
       async function refresh() {
         const res = await fetch(`${api}?action=list&page=1&per_page=0`);
-        const js  = await res.json();
+        const js = await res.json();
         fullList = js.data || [];
         updateStats();
-
         if (document.querySelector('.tab.active').dataset.tab === 'tab-list') {
           const term = document.getElementById('consultFilterInput').value.trim().toLowerCase();
-          if (term) {
-            doConsultFilter();
-          } else {
-            render(fullList, 'results-list', false);
-          }
+          if (term) doConsultFilter(); else renderTable(fullList);
         }
       }
       refresh();
       setInterval(refresh, 5000);
 
-      // Tabs
       document.querySelectorAll('.tab').forEach(tab => tab.onclick = () => {
         document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
         document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
@@ -464,127 +467,118 @@
       });
       document.querySelector('.tab.active').click();
 
-      // Render helper
-      function render(items, cid, hideActions) {
+      // Tarjetas (búsqueda / código)
+      function renderCards(items, cid, hideActions) {
         const ct = document.getElementById(cid);
-        if (!items || !items.length) {
-          ct.innerHTML = '<p class="text-slate-400">No hay documentos.</p>';
-          return;
-        }
+        if (!items || !items.length) { ct.innerHTML = '<p class="empty">No hay documentos.</p>'; return; }
         ct.innerHTML = items.map(d => `
-          <div class="border border-slate-200 rounded-xl p-4 bg-slate-50">
-            <div class="flex justify-between gap-4">
-              <div class="min-w-0">
-                <h3 class="font-semibold text-lg text-slate-800 truncate">${d.name}</h3>
-                <p class="text-slate-500 text-sm">${d.date}</p>
-                <p class="text-slate-400 text-xs truncate">Archivo PDF: ${d.path}</p>
-                <a href="uploads/${d.path}" target="_blank" class="text-emerald-600 hover:underline font-semibold text-sm mt-1 inline-block">Ver PDF</a>
+          <div class="doc">
+            <div class="doc-head">
+              <div style="min-width:0">
+                <h3>${esc(d.name)}</h3>
+                <div class="meta">${esc(d.date)}</div>
+                <div class="file">Archivo PDF: ${esc(d.path)}</div>
+                <a href="uploads/${encodeURIComponent(d.path)}" target="_blank" class="link">Ver PDF</a>
               </div>
-              <div class="button-group text-right shrink-0">
+              <div class="actions">
                 ${!hideActions ? `
-                  <button onclick="editDoc(${d.id})" class="btn btn--warning px-3 py-1 text-sm">Editar</button>
-                  <button onclick="pendingDeleteId=${d.id}; document.getElementById('deleteOverlay').classList.remove('hidden'); document.getElementById('deleteKeyInput').focus();" class="btn btn--dark px-3 py-1 text-sm">Eliminar</button>
-                ` : ''}
-                <button data-id="${d.id}" onclick="toggleCodes(this)" class="btn btn--secondary px-3 py-1 text-sm">Ver Códigos</button>
+                  <button onclick="editDoc(${d.id})" class="btn btn--warning btn--sm">Editar</button>
+                  <button onclick="askDelete(${d.id})" class="btn btn--dark btn--sm">Eliminar</button>` : ''}
+                <button data-id="${d.id}" onclick="toggleCodes(this)" class="btn btn--secondary btn--sm">Ver Códigos</button>
               </div>
             </div>
-            <pre id="codes${d.id}" class="mt-2 p-2 bg-white border border-slate-100 rounded-lg hidden text-sm overflow-auto">${(d.codes||[]).join('\n')}</pre>
-          </div>
-        `).join('');
+            <pre id="codes${d.id}" class="codes-pre hidden">${esc((d.codes||[]).join('\n'))}</pre>
+          </div>`).join('');
       }
 
-      // Búsqueda inteligente
-      window.clearSearch = () => {
-        document.getElementById('searchInput').value = '';
-        document.getElementById('results-search').innerHTML = '';
-        document.getElementById('search-alert').innerText = '';
+      // Tabla (consultar)
+      window.renderTable = function(items) {
+        const ct = document.getElementById('results-list');
+        if (!items || !items.length) { ct.innerHTML = '<p class="empty">No hay documentos.</p>'; return; }
+        ct.innerHTML = `
+          <div class="table-wrap">
+            <table class="docs">
+              <thead><tr>
+                <th>Nombre</th><th>Fecha</th><th>Archivo</th><th>Códigos</th><th>PDF</th><th>Acciones</th>
+              </tr></thead>
+              <tbody>
+                ${items.map(d => `
+                  <tr>
+                    <td class="t-name">${esc(d.name)}</td>
+                    <td>${esc(d.date)}</td>
+                    <td class="file">${esc(d.path)}</td>
+                    <td>${(d.codes||[]).slice(0,6).map(c=>`<span class="chip">${esc(c)}</span>`).join('')}${(d.codes||[]).length>6?`<span class="chip">+${(d.codes||[]).length-6}</span>`:''}</td>
+                    <td><a href="uploads/${encodeURIComponent(d.path)}" target="_blank" class="link">Ver</a></td>
+                    <td><div class="t-actions">
+                      <button onclick="editDoc(${d.id})" class="btn btn--warning btn--sm">Editar</button>
+                      <button onclick="askDelete(${d.id})" class="btn btn--dark btn--sm">Eliminar</button>
+                    </div></td>
+                  </tr>`).join('')}
+              </tbody>
+            </table>
+          </div>`;
       };
+
+      window.askDelete = id => { pendingDeleteId = id; document.getElementById('deleteOverlay').classList.remove('hidden'); document.getElementById('deleteKeyInput').focus(); };
+
+      window.clearSearch = clearSearch;
       window.doSearch = async () => {
         const raw = document.getElementById('searchInput').value.trim(); if (!raw) return;
         const codes = [...new Set(raw.split(/\r?\n/).map(l => l.trim().split(/\s+/)[0]).filter(Boolean))];
-        const fd = new FormData(); fd.append('action', 'search'); fd.append('codes', codes.join('\n'));
-        const res = await fetch(api, { method: 'POST', body: fd }); const data = await res.json();
+        const fd = new FormData(); fd.append('action','search'); fd.append('codes', codes.join('\n'));
+        const res = await fetch(api, { method:'POST', body:fd }); const data = await res.json();
         const found = new Set(data.flatMap(d => d.codes||[]));
         const missing = codes.filter(c => !found.has(c));
-        if (missing.length) document.getElementById('search-alert').innerText = 'No encontrados: ' + missing.join(', ');
-        document.getElementById('results-search').innerHTML = '';
-        render(data, 'results-search', true);
+        document.getElementById('search-alert').innerText = missing.length ? 'No encontrados: ' + missing.join(', ') : '';
+        renderCards(data, 'results-search', true);
       };
 
-      // Subir/Editar documento
       document.getElementById('form-upload').onsubmit = async e => {
         e.preventDefault();
         const fileInput = document.getElementById('file');
-        const warning   = document.getElementById('uploadWarning');
-        const f         = e.target;
-        const file      = fileInput.files[0];
-
-        if (file && file.size > 10 * 1024 * 1024) {
-          warning.classList.remove('hidden');
-          return;
-        }
+        const warning = document.getElementById('uploadWarning');
+        const f = e.target; const file = fileInput.files[0];
+        if (file && file.size > 10 * 1024 * 1024) { warning.classList.remove('hidden'); return; }
         warning.classList.add('hidden');
-
         const act = f.id.value ? 'edit' : 'upload';
-        const fd  = new FormData(f);
-        fd.append('action', act);
-
-        const res = await fetch(api, { method: 'POST', body: fd });
-        const js  = await res.json();
+        const fd = new FormData(f); fd.append('action', act);
+        const res = await fetch(api, { method:'POST', body:fd });
+        const js = await res.json();
         toast(js.message || js.error);
-        f.reset();
-        document.getElementById('fileLabel').textContent = 'Arrastra un PDF aquí o haz clic para seleccionar';
+        f.reset(); document.getElementById('fileLabel').textContent = DEF_LABEL;
       };
 
-      // Consultar
-      window.clearConsultFilter = () => {
-        document.getElementById('consultFilterInput').value = '';
-        document.getElementById('results-list').innerHTML = '';
-      };
+      window.clearConsultFilter = () => { document.getElementById('consultFilterInput').value=''; renderTable(fullList); };
       window.doConsultFilter = () => {
         const term = document.getElementById('consultFilterInput').value.trim().toLowerCase();
-        render(fullList.filter(d => d.name.toLowerCase().includes(term) || d.path.toLowerCase().includes(term)), 'results-list', false);
+        renderTable(fullList.filter(d => d.name.toLowerCase().includes(term) || d.path.toLowerCase().includes(term)));
       };
-      window.downloadCsv = () => { let csv = 'Código,Documento\n'; fullList.forEach(d => d.codes.forEach(c => csv += `${c},${d.name}\n`)); const blob = new Blob([csv], { type:'text/csv' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'documentos.csv'; a.click(); URL.revokeObjectURL(url); };
+      window.downloadCsv = () => { let csv='Código,Documento\n'; fullList.forEach(d => d.codes.forEach(c => csv += `${c},${d.name}\n`)); const blob=new Blob([csv],{type:'text/csv'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='documentos.csv'; a.click(); URL.revokeObjectURL(url); };
       window.downloadPdfs = () => { window.location = `${api}?action=download_pdfs`; };
 
-      // Búsqueda por código + autocomplete
       const codeInput = document.getElementById('codeInput'), suggest = document.getElementById('suggestions'); let timeoutId;
       codeInput.addEventListener('input', () => {
         clearTimeout(timeoutId); const term = codeInput.value.trim().toUpperCase(); if (!term) return suggest.classList.add('hidden');
         timeoutId = setTimeout(async () => {
           const r = await fetch(`${api}?action=suggest&term=${encodeURIComponent(term)}`); const arr = await r.json();
           if (!arr.length) return suggest.classList.add('hidden');
-          suggest.innerHTML = arr.map(c => `<div class="py-2 px-3 hover:bg-slate-100 cursor-pointer rounded" data-code="${c}">${c}</div>`).join('');
+          suggest.innerHTML = arr.map(c => `<div data-code="${esc(c)}">${esc(c)}</div>`).join('');
           suggest.classList.remove('hidden');
         }, 200);
       });
-      suggest.addEventListener('click', e => { const c = e.target.dataset.code; if (!c) return; codeInput.value = c; suggest.classList.add('hidden'); doCodeSearch(); });
+      suggest.addEventListener('click', e => { const c = e.target.dataset.code; if (!c) return; codeInput.value=c; suggest.classList.add('hidden'); doCodeSearch(); });
       codeInput.addEventListener('blur', () => setTimeout(() => suggest.classList.add('hidden'), 100));
-      window.clearCode = () => { document.getElementById('results-code').innerHTML = ''; };
+      window.clearCode = () => { document.getElementById('results-code').innerHTML=''; };
       window.doCodeSearch = async () => {
-        const code = codeInput.value.trim();
-        if (!code) return;
-
-        const fd = new FormData();
-        fd.append('action', 'search_by_code');
-        fd.append('code', code);
-
-        const res = await fetch(api, { method: 'POST', body: fd });
-        const data = await res.json();
-
-        document.getElementById('results-code').innerHTML = '';
-        if (!data.length) {
-          document.getElementById('results-code').innerHTML = '<p class="text-slate-400">No hay documentos.</p>';
-        } else {
-          render(data, 'results-code', true);
-        }
+        const code = codeInput.value.trim(); if (!code) return;
+        const fd = new FormData(); fd.append('action','search_by_code'); fd.append('code', code);
+        const res = await fetch(api, { method:'POST', body:fd }); const data = await res.json();
+        if (!data.length) document.getElementById('results-code').innerHTML = '<p class="empty">No hay documentos.</p>';
+        else renderCards(data, 'results-code', true);
       };
 
-      // Editar y toggle códigos
       window.editDoc = id => {
-        const d = fullList.find(x => x.id===id);
-        if (!d) return;
+        const d = fullList.find(x => x.id===id); if (!d) return;
         document.querySelector('[data-tab="tab-upload"]').click();
         document.getElementById('docId').value = d.id;
         document.getElementById('name').value = d.name;
@@ -592,16 +586,13 @@
         document.getElementById('codes').value = d.codes.join('\n');
       };
       window.deleteDoc = async id => {
-        const res = await fetch(`${api}?action=delete&id=${id}`);
-        const js = await res.json();
+        const res = await fetch(`${api}?action=delete&id=${id}`); const js = await res.json();
         toast(js.message||js.error);
         document.querySelector('.tab.active').click();
       };
       window.toggleCodes = btn => {
-        const id = btn.dataset.id;
-        const pre = document.getElementById(`codes${id}`);
-        if (pre.classList.toggle('hidden')) btn.textContent='Ver Códigos';
-        else btn.textContent='Ocultar Códigos';
+        const pre = document.getElementById(`codes${btn.dataset.id}`);
+        btn.textContent = pre.classList.toggle('hidden') ? 'Ver Códigos' : 'Ocultar Códigos';
       };
     }
   </script>
