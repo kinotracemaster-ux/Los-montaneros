@@ -22,7 +22,9 @@ RUN apt-get update \
 
 WORKDIR /app
 COPY . /app
+RUN chmod +x /app/start.sh
 
-# Railway provides $PORT at runtime; fall back to 8080 for local runs.
-# Shell form so the variable is expanded.
-CMD php -S 0.0.0.0:${PORT:-8080} -t .
+# Railway provides $PORT at runtime; start.sh expands it inside a shell and
+# falls back to 8080 for local runs. Using an explicit script guarantees the
+# variable is expanded regardless of how the platform invokes the command.
+CMD ["sh", "/app/start.sh"]
