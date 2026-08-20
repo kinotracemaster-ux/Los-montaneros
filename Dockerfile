@@ -24,7 +24,13 @@ WORKDIR /app
 COPY . /app
 RUN chmod +x /app/start.sh
 
-# Railway provides $PORT at runtime; start.sh expands it inside a shell and
-# falls back to 8080 for local runs. Using an explicit script guarantees the
-# variable is expanded regardless of how the platform invokes the command.
+# Default listen port. Railway may override PORT at runtime (its value wins);
+# if it doesn't, the app listens on 8080. EXPOSE lets Railway auto-detect the
+# port to route public traffic to, avoiding the 502 from a port mismatch.
+ENV PORT=8080
+EXPOSE 8080
+
+# start.sh expands $PORT inside a shell and falls back to 8080 for local runs.
+# Using an explicit script guarantees the variable is expanded regardless of
+# how the platform invokes the command.
 CMD ["sh", "/app/start.sh"]
