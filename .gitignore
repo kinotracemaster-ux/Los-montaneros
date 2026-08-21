@@ -5,6 +5,9 @@
 /uploads/*
 !/uploads/.gitkeep
 
+# Variables de entorno locales
+.env
+
 # Sistema
 desktop.ini
 Thumbs.db
